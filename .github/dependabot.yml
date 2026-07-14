@@ -13,3 +13,10 @@ updates:
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
+    # TypeScript 7 (the native compiler) breaks tsup's .d.ts step via
+    # rollup-plugin-dts (`useCaseSensitiveFileNames` TypeError). Stay on the 5.x
+    # line — matching the rest of the MoroJS ecosystem — until the build
+    # toolchain (tsup / rollup-plugin-dts) supports TS 7.
+    ignore:
+      - dependency-name: 'typescript'
+        update-types: ['version-update:semver-major']
