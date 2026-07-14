@@ -1,0 +1,52 @@
+name: Publish to NPM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    name: Publish to NPM
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance + trusted publishing (OIDC)
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      # OIDC trusted publishing (tokenless publish) needs npm >= 11.5.1. Node 20
+      # ships npm 10.x, and npm@latest is now 12.x (which dropped Node 20 support),
+      # so pin the 11.x line — it supports Node 20.17+ and does trusted publishing.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Check package contents
+        run: npm pack --dry-run
+
+      # OIDC trusted publishing: authenticates via the id-token exchange
+      # (id-token: write above + the trusted publisher configured on npmjs.com),
+      # so no NPM_TOKEN is needed. --provenance publishes a signed
+      # build-provenance attestation for source-to-artifact traceability.
+      - name: Publish to NPM
+        run: npm publish --access public --provenance
